@@ -6,13 +6,32 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import csv
-import glob
 import os.path
 import serial
 from serial import Serial
 import scipy.signal as signal
+import math
+import serial.tools.list_ports
     
-window = tk.Tk()
+
+#Progress bar 
+class ProgressBar :
+    def __init__(self, master, maximum) :
+        self.master = master
+        self.maximum = maximum
+        self.progressbar = tk.ttk.Progressbar(master, maximum = maximum, length = 400)
+        self.progressbar.grid(column = 8, row = 9)
+        self.count = 0
+
+    def update(self) :
+        self.count += 1
+        self.progressbar['value'] = self.count
+        self.master.update_idletasks()
+
+    def reset_progressbar(self) :
+        self.count = 0
+        self.progressbar['value'] = 0
+        self.master.update_idletasks()
 
 #Start Button Function
 def StartButton():
@@ -40,203 +59,229 @@ def StartButton():
     CheckVmin = float(vmin_var.get())
     CheckVmax = float(vmax_var.get())
     CheckScanRate = int(scanrate_var.get())
-    CheckCycle = int(cycle_var.get())
+    CheckCycle = int(cycle_var.get()) #Belom Divalidasi
     CheckAmp = float(amp_var.get())
     CheckIncrement = float(vincrem_var.get())
-    CheckSampling  = float(sampling_var.get())
+    CheckSampling  = float(sampling_var.get()) #Belom Divalidasi
     CheckPulse = float(pulse_var.get())
 
     #Validate if Input is empty
     if methodnumber == "" or vmin_var.get() == "" or vmax_var.get() == "" or scanrate_var.get() =="" or cycle_var.get() == "" or inputchannelnumber.get() == "" or ion1.get() == "" or ion2.get() == "" or amp_var.get() == "" or vincrem_var.get() == "" or pulse_var.get() == "" or sampling_var.get() == "" or inputfilename.get() =="":
         messagebox.showerror("ERROR", "Please Enter All Value of Input Parameter")
-    elif methodnumber == '1':
-        if CheckVmin < -1.5 or CheckVmin > 1.5 :
-            messagebox.showerror("ERROR", "Please Enter Vmin Value Between -1.5V - 1.5V")
-        elif CheckVmax < -1.5 or CheckVmax > 1.5 :
-            messagebox.showerror("ERROR", "Please Enter Vmax Value Between -1.5V - 1.5V")
-        elif CheckScanRate < 10 or CheckScanRate > 120: 
-            messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
-        else :
-            parameter = inputmethod.get() + "|" + vmin_var.get() + "|" + vmax_var.get() +  "|" + scanrate_var.get() + "|" + cycle_var.get() + "|" + inputchannelnumber.get() + "|" + ion1.get() + "|" + ion2.get() + "|" + vincrem_var.get() + "|" + amp_var.get() + "|" + sampling_var.get() + "|" + pulse_var.get() 
-            messagebox.showinfo("INFO", "Make sure the filename and parameters are correct.\nYour filename is "+inputfilename.get()+".csv.\nYour parameter is "+parameter+".\nPlease click 'OK' to continue the process.\n Wait until the plot is shown.\n The file will be saved in " + parent_folder) 
-    elif methodnumber == '2':
-        if CheckVmin < -1.5 or CheckVmin > 1.5 :
-            messagebox.showerror("ERROR", "Please Enter Vmin Value Between -1.5V - 1.5V")
-        elif CheckVmax < -1.5 or CheckVmax > 1.5 :
-            messagebox.showerror("ERROR", "Please Enter Vmax Value Between -1.5V - 1.5V")
-        elif CheckScanRate < 10 or CheckScanRate > 120: 
-            messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
-        elif CheckIncrement < 1 or CheckIncrement > 250 :
-            messagebox.showerror("ERROR", "Please Enter Vinc Value Between 1mV - 250mV")
-        elif inputmethod.get() == "DPV" and (CheckAmp < 1 or CheckAmp > 250) :
-            messagebox.showerror("ERROR", "Please Enter Vamp Value Between 1mV - 250mV")
-        elif inputmethod.get() == 'DPV' and (CheckPulse < 0.4 or CheckPulse > 1)  :
-            messagebox.showerror("ERROR", "Please Enter TPulse Value Between 0.4ms - 1s")
-        else :
-            parameter = inputmethod.get() + "|" + vmin_var.get() + "|" + vmax_var.get() +  "|" + scanrate_var.get() + "|" + cycle_var.get() + "|" + inputchannelnumber.get() + "|" + ion1.get() + "|" + ion2.get() + "|" + vincrem_var.get() + "|" + amp_var.get() + "|" + sampling_var.get() + "|" + pulse_var.get() 
-            messagebox.showinfo("INFO", "Make sure the filename and parameters are correct.\nYour filename is "+inputfilename.get()+".csv.\nYour parameter is "+parameter+".\nPlease click 'OK' to continue the process.\n Wait until the plot is shown.\n The file will be saved in " + parent_folder) 
-
-    
-    file_name = inputfilename.get()+".csv"
-
-    input_parameter = methodnumber+"|"+vmin_var.get()+"|"+vmax_var.get()+"|"+vincrem_var.get()+"|"+scanrate_var.get()+"|"+cycle_var.get()+"|"+sampling_var.get()+"|"+amp_var.get()+"|"+pulse_var.get()+"|"+inputchannelnumber.get()+"|"
-    string1 = input_parameter
-    string1_encode = string1.encode()
-
-    ser = serial.Serial(port = 'COM3', baudrate = 115200, timeout = 5)
-    ser.flushInput()
-    ser.write(string1_encode)
-
-    print(string1_encode)
-
-    folder = os.path.join(path_file, file_name)
-
-    #plt.ion()
-
-    #Initialize data Arrays
-    x = []
-    y1 = []
-    y2 = []
-
-    #Set up the plot
-    #fig, ax = plt.subplots()
-    #ax.set_xlabel("Voltage(V)")
-   # ax.set_ylabel("Current(µA)")
-    #ax.set_title("Voltammogram")
-
-    #Reading data from serial port
-    #Retrieving data from Serial Communication
-    while True :
-        #Read a line from serial
-        line = ser.readline().decode('utf-8').rstrip()
-        print(line)
-        #data = line.split(';')
-        if (len(line) > 1) :
-            with open(folder, 'a') as f:
-                writer = csv.writer(f)  
-                writer.writerow(line)
-        else :
-            break
-        #Split the line into columns
-        #data = line.split(";")
-
-        #if data == "":
-         #   break
-        
-        #Check total amount of columns in data
-        #if len(data) == 2 : #1 Channel
-            #Append Data to Arrays
-        #    x.append(data[0])
-        #    y1.append(data[1])
-
-            #Plot the Data
-        #    ax.plot(x, y1, 'r', label = 'Channel 1')
-        #    ax.legend()
-
-            #Draw the plot
-        #    plt.draw()
-        #    plt.pause(0.001)
-        
-       # elif len(data) == 3 : #2 Channel 
-            #Append data to arrays
-        #    x.append(data[0])
-         #   y1.append(data[1])
-          #  y2.append(data[2])
-
-            #Plot the data
-        #    ax.plot(x, y1, 'r', label = 'Channel 1')
-        #    ax.plot(x, y2, 'g', label = 'Channel 2')
-        #    ax.legend()
-
-            #Draw The plot
-        #    plt.draw()
-        #    plt.pause(0.001)
-
-        #Write Serial Data to CSV File
-        #with open (folder, 'a', newline = "") as f:
-         #   writer = csv.writer(f)
-          #  writer.writerow(data)
-    
-    #Close the Serial Communication
-    ser.close()
-       
-    #Reading File
-    df = pd.read_csv(folder)
-
-    #Read total amount of column
-    total_column = len(df.axes[1])
-
-    if total_column == 2 : #Plotting data for 1 channel only
-        x = df[df.columns[0]]
-        y1 = df[df.columns[1]]
-
-        max_current1 = df.columns[1].max()  #Finding the maximum value of current in channel 1
-        K_Concentration1 =  81.3888 + 0.267 * max_current1    #Concentration Estimation of K
-        Na_Concentration1 = 277.3594 + 0.913 * max_current1   #Concentration Estimation of Na
-        
-        #Calulate Concentration
-        if ion1.get() == "K" and ion2.get() == "None" :      
-            result1.insert(0, K_Concentration1)
-        elif ion1.get1() == "Na" and ion2.get() == "None":
-            result1.insert(0, Na_Concentration1)
-    
-        plt.plot(x, y1, color = 'red', label = 'Channel 1')
-        plt.xlabel("Voltage(V)")
-        plt.ylabel("Current(µA)")
-        plt.title("Voltammogram")
-        plt.axis([-1.5, 1.5, -600, 600])
-        plt.grid('on')
-        plt.show()
-
-
-    elif total_column == 3 : #2 Channel Plotting Data
-        x = df[df.columns[0]]
-        y1 = df[df.columns[1]]
-        y2 = df[df.columns[2]]
-
-        max_current1 = df.columns[1].max()  #Finding the maximum value of current in Channel 1
-        max_current2 = df.columns[2].max()  #Finding the maximum value of current in channel 2
-        K_Concentration1 = 81.3888 + 0.267 * max_current1   #Concentration Estimation of K in Channel 1
-        K_Concentration2 = 81.3888 + 0.267 * max_current2   #Concentration Estimation of K in Channel 2
-        Na_Concentration1 = 277.3594 + 0.913 * max_current1   #Concentration Estimation of Na in Channel 1
-        Na_Concentration2 = 277.3594 + 0.913 * max_current2   #Concentration Estimation of Na in Channel 2
-
-        #Calculate Concentration
-        if ion1.get() == "K" and ion2.get() == "K":
-            result1.insert(0, K_Concentration1)
-            result2.insert(0, K_Concentration2)
-        elif ion1.get() == "Na" and ion2.get() == "Na" :
-            result1.insert(0, Na_Concentration1)
-            result2.insert(0, Na_Concentration2)
-        elif ion1.get() == "K" and ion2.get() == "Na" :
-            result1.insert(0, K_Concentration1)
-            result2.insert(0, Na_Concentration2)
-        elif ion1.get() == "Na" and ion2.get() == "K" :
-            result1.insert(0, Na_Concentration1)
-            result2.insert(0, K_Concentration2)
-            
-        #Subplot for Channel 1  
-        plt.subplot(211)
-        plt.plot(x, y1, color='red', label = "Channel 1")
-        plt.xlabel("Voltage(V)")
-        plt.ylabel("Current(µA)")
-        plt.axis([-1.5, 1.5, -600, 600])
-        plt.grid('on')
-
-        #Subplot for channel 2
-        plt.subplot(212)
-        plt.plot(x, y2, color = 'green', label = "Channel 2")
-        plt.xlabel("Voltage(V)")
-        plt.ylabel("Current(µA)")
-        plt.axis([-1.5, 1.5, -600, 600])
-        plt.grid('on')
-    
-        #Naming the main graph
-        plt.suptitle("Voltammogram")   
-        plt.show()
-
     else :
-         messagebox.showerror("ERROR", "ERROR")
+        if methodnumber == '1':
+            if CheckVmin < -1.5 or CheckVmin > 1.5 :
+                messagebox.showerror("ERROR", "Please Enter Vmin Value Between -1.5V - 1.5V")
+            elif CheckVmax < -1.5 or CheckVmax > 1.5 :
+                messagebox.showerror("ERROR", "Please Enter Vmax Value Between -1.5V - 1.5V")
+            elif CheckScanRate < 10 or CheckScanRate > 120: 
+                messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
+        
+        elif methodnumber == '2':
+            if CheckVmin < -1.5 or CheckVmin > 1.5 :
+                messagebox.showerror("ERROR", "Please Enter Vmin Value Between -1.5V - 1.5V")
+            elif CheckVmax < -1.5 or CheckVmax > 1.5 :
+                messagebox.showerror("ERROR", "Please Enter Vmax Value Between -1.5V - 1.5V")
+            elif CheckScanRate < 10 or CheckScanRate > 120: 
+                messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
+            elif CheckIncrement < 1 or CheckIncrement > 250 :
+                messagebox.showerror("ERROR", "Please Enter Vinc Value Between 1mV - 250mV")
+            elif inputmethod.get() == "DPV" and (CheckAmp < 1 or CheckAmp > 250) :
+                messagebox.showerror("ERROR", "Please Enter Vamp Value Between 1mV - 250mV")
+            elif inputmethod.get() == 'DPV' and (CheckPulse < 0.4 or CheckPulse > 1)  :
+                messagebox.showerror("ERROR", "Please Enter TPulse Value Between 0.4ms - 1000 ms")
+        
+        parameter = inputmethod.get() + "|" + vmin_var.get() + "|" + vmax_var.get() +  "|" + scanrate_var.get() + "|" + cycle_var.get() + "|" + inputchannelnumber.get() + "|" + ion1.get() + "|" + ion2.get() + "|" + vincrem_var.get() + "|" + amp_var.get() + "|" + sampling_var.get() + "|" + pulse_var.get() 
+        messagebox.showinfo("INFO", "Make sure the filename and parameters are correct.\nYour filename is "+inputfilename.get()+".csv.\nYour parameter is "+parameter+".\nPlease click 'OK' to continue the process.\n Wait until the plot is shown.\n The file will be saved in " + parent_folder) 
+        
+        file_name = inputfilename.get()+".csv"
+
+        input_parameter = methodnumber+"|"+vmin_var.get()+"|"+vmax_var.get()+"|"+vincrem_var.get()+"|"+scanrate_var.get()+"|"+cycle_var.get()+"|"+sampling_var.get()+"|"+amp_var.get()+"|"+pulse_var.get()+"|"+inputchannelnumber.get()+"|"
+        string1 = input_parameter
+        string1_encode = string1.encode()
+        
+        #Get a list of all available ports
+        #ports = serial.tools.list_ports.comports()
+
+        try : 
+            ser = serial.Serial(port = 'COM3', baudrate = 115200)
+            ser.parity = serial.PARITY_NONE
+            ser.bytesize = serial.EIGHTBITS
+            ser.stopbits = serial.STOPBITS_ONE
+            
+            #clear the input buffer
+            ser.flushInput()
+
+            #Write data to ESP32
+            ser.write(string1_encode)
+
+            #Save data in folder
+            folder = os.path.join(path_file, file_name)
+        
+            #Open the CSV file for writing
+            with open(folder, 'a', newline="") as f :
+                writer = csv.writer(f, delimiter = ";")
+                writer.writerow(["Voltage", "Current_1", "Current_2"])  #Write header in csv file for the first row
+            
+                #Reading data from serial port
+                #Retrieving data from Serial Communication
+                while True :
+                    #Read a line from serial
+                    line = ser.readline().decode('latin-1').strip()
+                    print(line)
+                
+                    #Break out of the loop if read serial data "999999999"
+                    if line == "999999999" :
+                        break
+            
+                    data = line.split(';')
+
+                    if len(data) == 2 :
+                        writer.writerow([data[0], data[1]])
+
+                    elif len(data) == 3 :
+                        writer.writerow([data[0], data[1], data[2]])
+                    
+                    progress_bar.update()
+
+                    #if progress_bar.count >= max_rows :
+                        #break
+
+            #Close the serial plot
+            ser.close()
+
+        except IndexError or UnicodeDecodeError or serial.serialutil.SerialException :
+            messagebox.showerror("ERROR", "Something went wrong. Please, Try again")
+            
+        
+        #Reading the data from CSV File and Plit
+        with open(folder, 'r') as f :
+            reader = csv.reader(f, delimiter = ";")
+            next(reader)    #Skip the header row
+
+            #Define variable of array
+            x = []
+            y1 = []
+            y2 = []
+
+            for row in reader :
+                if len(row) == 3 :
+                    x.append(float(row[0]))
+                    y1.append(float(row[1]))
+                    y2.append(float(row[2]))
+
+                elif len(row) == 2 :
+                    x.append(float(row[0]))
+                    y1.append(float(row[1]))
+
+            #Check number of channel that being used
+            if len(y1) > 0 and len(y2) == 0 :   #1 Channel only
+                #Find maximum value in desired range
+                LowerRange1 = math.floor((CheckCycle - 1)/CheckCycle * len(y1))   #Lower Range of index
+                UpperRange1 = len(y1) + 1   #Upper range of index
+
+                #Slice the array
+                values_in_range1 = y1[LowerRange1:UpperRange1] 
+
+                #Find the maximum value in specified range
+                slope1 = max(values_in_range1)
+
+                max_current1 = max(y1)  #Finding the maximum value of current in channel 1
+                min_current1 = min(y1)  #Findign the minimum value of current in channel 1
+
+                K_Concentration1 =  81.3888 + 0.267 * slope1    #Concentration Estimation of K
+                K_Concentration1 = round(K_Concentration1, 4)   #Round the number to 4 decimal places
+
+                Na_Concentration1 = 277.3594 + 0.913 * slope1   #Concentration Estimation of Na
+                Na_Concentration1 = round(Na_Concentration1, 4) #Round the number to 4 decimal places
+        
+                #Calulate Concentration
+                if ion1.get() == "K" and ion2.get() == "None" :      
+                    result1.insert(0, K_Concentration1)
+                elif ion1.get1() == "Na" and ion2.get() == "None":
+                    result1.insert(0, Na_Concentration1)
+
+                #Plotting the Data from CSV
+                plt.plot(x, y1, color = 'red', label = 'Channel 1')
+                plt.xlabel("Voltage(V)")
+                plt.ylabel("Current(µA)")
+                plt.title("Voltammogram")
+                plt.axis([-1.5, 1.5, min_current1, max_current1])
+                plt.grid('on')
+                plt.show()
+
+            elif len(y1) > 0 and len(y2) > 0 :    #Using 2 channel
+                #Find maximum value in desired range
+                LowerRange1 = math.floor((CheckCycle - 1)/CheckCycle * len(y1))   #Lower range of index in channel 1
+                LowerRange2 = math.floor((CheckCycle - 1)/CheckCycle * len(y2))   #Lower range of index in channel 2
+                UpperRange1 = len(y1) + 1                       #Upper range of index in channel 1 
+                UpperRange2 = len(y2) + 1                       #Upper range of index in channel 2
+
+                #Slicing the array
+                values_in_range1 = y1[LowerRange1:UpperRange1]
+                values_in_range2 = y2[LowerRange2:UpperRange2]
+
+                #Finding the maximum value in specified range
+                slope1 = max(values_in_range1)
+                slope2 = max(values_in_range2)
+
+                max_current1 = max(y1)  #Finding the maximum value of current in Channel 1
+                max_current2 = max(y2)  #Finding the maximum value of current in channel 2
+                min_current1 = min(y1)  #Finding the minimum value of current in channel 1
+                min_current2 = min(y2)  #Finding the minimum value of current in channel 2
+                
+                #Calculate the concentration of ion
+                K_Concentration1 = 81.3888 + 0.267 * slope1   #Concentration Estimation of K in Channel 1
+                K_Concentration1 = round(K_Concentration1, 4)   #Round the number to 4 decimal places
+
+                K_Concentration2 = 81.3888 + 0.267 * slope2  #Concentration Estimation of K in Channel 2
+                K_Concentration2 = round(K_Concentration2, 4)   #Round the number to 4 decimal places
+
+                Na_Concentration1 = 277.3594 + 0.913 * slope1   #Concentration Estimation of Na in Channel 1
+                Na_Concentration1 = round(Na_Concentration1, 4)
+
+                Na_Concentration2 = 277.3594 + 0.913 * slope2   #Concentration Estimation of Na in Channel 2
+                Na_Concentration2 = round(Na_Concentration2, 4)
+
+                #Calculate Concentration
+                if ion1.get() == "K" and ion2.get() == "K":
+                    result1.insert(0, K_Concentration1)
+                    result2.insert(0, K_Concentration2)
+                elif ion1.get() == "Na" and ion2.get() == "Na" :
+                    result1.insert(0, Na_Concentration1)
+                    result2.insert(0, Na_Concentration2)
+                elif ion1.get() == "K" and ion2.get() == "Na" :
+                    result1.insert(0, K_Concentration1)
+                    result2.insert(0, Na_Concentration2)
+                elif ion1.get() == "Na" and ion2.get() == "K" :
+                    result1.insert(0, Na_Concentration1)
+                    result2.insert(0, K_Concentration2)
+
+                print("Arus maksimum channel 1: ", max_current1)
+                print("Arus maksimum in cycle 3: ", slope1)
+            
+                #Subplot for Channel 1  
+                plt.subplot(211)
+                plt.plot(x, y1, color='red', label = "Channel 1")
+                plt.xlabel("Voltage(V)")
+                plt.ylabel("Current(µA)")
+                plt.axis([-1.5, 1.5, min_current1, max_current1])
+                plt.grid('on')
+
+                #Subplot for channel 2
+                plt.subplot(212)
+                plt.plot(x, y2, color = 'green', label = "Channel 2")
+                plt.xlabel("Voltage(V)")
+                plt.ylabel("Current(µA)")
+                plt.axis([-1.5, 1.5, min_current2, max_current2])
+                plt.grid('on')
+    
+                #Naming the main graph
+                plt.suptitle("Voltammogram")   
+                plt.show()
+
+            else :
+                messagebox.showerror("ERROR", "ERROR")
 
 #Reset Button Function
 def ResetButton():
@@ -259,33 +304,13 @@ def ResetButton():
     inputmethod.set("")
     inputfilename.set("")
     inputchannelnumber.set("")
-    ion.set("")
+    ion1.set("")
+    ion2.set("")
     result1_var.set("")
     result2_var.set("")
+    progress_bar.reset_progressbar()
 
-#Estimation Concentration Dummy
-def concentration():
-    value1 = 0.243
-    value2 = 0.555
-
-    result1.insert(0, value1)
-    result2.insert(0, value2)
-
-#Progressbar Function
-#def update_progress_label():
-    #return f"Current Progress : {pb['value']}%"
-
-#def progress():
-    #if pb['value'] < 100:
-   #     pb['value'] += 20
-   #     value_label['text'] = update_progress_label()
-   # else:
-    #    showinfo(message = 'The Progress Completed')
-
-#def stop() :
-  ## value_label['text'] = update_progress_label()
-
-
+#Function for disabling paramter input based on method being choosen by user
 def metode() :
     if (inputmethod.get() == "CV"):
         VminEntry['state'] = tk.NORMAL
@@ -308,12 +333,13 @@ def metode() :
 ###################### APP WIDGET ######################
 
 #App window 
+window = tk.Tk()
 window.geometry("1000x450")
 window.title("Potensiostat")
 window.resizable(False, False)
 
 #Column 1
-method = tk.Label(window, text = "Method") #Edit
+method = tk.Label(window, text = "Method")
 method.grid(column = 0  , row = 3)
 
 #Combobox for method dropdown button 
@@ -368,7 +394,7 @@ TextArea = tk.Label(text = "Additional Parameter For DPV Method: ").grid(column 
 Vincrem = tk.Label(text = "Vinc(mV) [Value between 1mV - 250mV]").grid(column = 8, row = 4) #Edit
 Amp = tk.Label(text = "Vamp(mV) [Value between 1mV - 250mV]").grid(column = 8, row = 5)
 Sampling = tk.Label(text = "Tsampling(ms)").grid(column = 8, row = 6)
-Pulse = tk.Label(text = "TPulse(ms) [Value between 0.4ms to 1s]").grid(column = 8, row = 7)
+Pulse = tk.Label(text = "TPulse(ms) [Value between 0.4ms to 1000ms]").grid(column = 8, row = 7)
 
 #Input column
 
@@ -436,12 +462,12 @@ pulseEntry['state'] = tk.DISABLED
 result1_var = tk.StringVar()
 result2_var = tk.StringVar()
 
-#Create Canvas
 tk.Label(window, text = "Concentration Of Samples", font = ("Sherif", 12), fg = "red").grid(column = 8, row = 10)
-Result1 = tk.Label(text = "Concentration in Channel 1 : ").grid(column = 0 , row = 20 )
+Result1 = tk.Label(text = "Concentration in Channel 1 (mM): ").grid(column = 0 , row = 20 )
 result1 = tk.Entry(textvariable = result1_var, width = 25)
 result1.grid(row = 20, column = 1)
-Result2 = tk.Label(text = "Concentration in Channel 2 : ").grid(column = 8, row = 20)
+
+Result2 = tk.Label(text = "Concentration in Channel 2 (mM): ").grid(column = 8, row = 20)
 result2 = tk.Entry(textvariable = result2_var, width  = 25)
 result2.grid(row = 20, column = 10)
 
@@ -456,7 +482,7 @@ ttk.Label(window, text = "Press Reset", font = ("Sherif", 12)).grid(column = 8, 
 ttk.Label(window, text = "every time you change the measurement method and finish measuring", font = ("Sherif", 10)).grid(column = 8, row = 50)
 
 #Progressbar
-#pb = ttk.Progressbar(window, orien = 'horizontal', mode = 'determinate', length = 400)
-#pb.grid(column = 10, row = 10, columnspan = 2, padx = 10, pady = 20)
+max_rows = 10000
+progress_bar = ProgressBar(window, max_rows)
 
 window.mainloop()
