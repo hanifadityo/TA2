@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from PIL import Image, ImageTk
 
 import numpy as np
 import pandas as pd
@@ -77,10 +78,14 @@ def StartButton():
                     messagebox.showerror("ERROR", "Please Enter Vmin Value Between -1.5V - 1.5V")
                 elif CheckVmax < -1.5 or CheckVmax > 1.5 :
                     messagebox.showerror("ERROR", "Please Enter Vmax Value Between -1.5V - 1.5V")
+                elif CheckVmax == CheckVmin :
+                    messagebox.showerror("ERROR", "Vmax and Vmin Must Be a Different Value")
                 elif CheckScanRate < 10 or CheckScanRate > 120:
                     messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
                 elif CheckCycle <= 0 : 
                     messagebox.showerror("ERROR", "Please Enter Cycle Value Greater Than 0")
+                elif CheckCycle > 255 :
+                    messagebox.showerror("ERROR", "Cycle Value is Too Big")
                 else :
                     valid = True    #All user input is valid
             except ValueError : #Return error if not a number
@@ -106,6 +111,8 @@ def StartButton():
                     messagebox.showerror("ERROR", "Please Enter Vmin Value Between -1.5V - 1.5V")
                 elif CheckVmax < -1.5 or CheckVmax > 1.5 :
                     messagebox.showerror("ERROR", "Please Enter Vmax Value Between -1.5V - 1.5V")
+                elif CheckVmax == CheckVmin :
+                    messagebox.showerror("ERROR", "Vmax and Vmin Must Be a Different Value")
                 elif CheckScanRate < 10 or CheckScanRate > 120: 
                     messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
                 elif CheckIncrement < 1 or CheckIncrement > 250 :
@@ -180,7 +187,7 @@ def StartButton():
                     #Retrieving data from Serial Communication
                     while True :
                         #Read a line from serial
-                        line = ser.readline().decode().strip()
+                        line = ser.readline().decode('latin-1').strip()
                         print(line)
                 
                         #Break out of the loop if read serial data "999999999"
@@ -388,6 +395,10 @@ window.geometry("1000x450")
 window.title("Potensiostat")
 window.resizable(False, False)
 
+#add icon logo
+icon = tk.PhotoImage(file = 'gear-icon.png')
+window.iconphoto(False, icon)
+
 #Column 1
 method = tk.Label(window, text = "Method")
 method.grid(column = 0  , row = 3)
@@ -408,7 +419,7 @@ inputchannelnumber.set("")
 Filename = tk.Label(text = "File Name").grid(column = 0, row = 1) #EditF
 Vmin = tk.Label(text = "Vmin(V) [Value between -1.5V - 1.5V]").grid(column = 0, row = 5)
 Vmax = tk.Label(text = "Vmax(V) [Value between -1.5V - 1.5V]").grid(column = 0, row = 6)
-Cycle = tk.Label(text = "Cycle").grid(column = 0, row = 7)
+Cycle = tk.Label(text = "Cycle [Value between 0 - 255]").grid(column = 0, row = 7)
 Scanrate = tk.Label(text = "Scan Rate(mV/s) [Value between 10-120]").grid(column = 0, row = 8)
 
 #Text for Input Parameter Button
