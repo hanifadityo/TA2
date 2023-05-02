@@ -101,10 +101,10 @@ def StartButton():
                 CheckVmin = float(vmin_var.get())
                 CheckVmax = float(vmax_var.get())
                 CheckScanRate = int(scanrate_var.get())
-                CheckIncrement = int(vincrem_var.get())
-                CheckAmp = int(amp_var.get())
+                CheckIncrement = float(vincrem_var.get())
+                CheckAmp = float(amp_var.get())
                 CheckPulse = float(pulse_var.get())
-                CheckSampling = int(sampling_var.get())
+                CheckSampling = float(sampling_var.get())
                 
                 #Validate the range of each parameter input
                 if CheckVmin < -1.5 or CheckVmin > 1.5 :
@@ -121,6 +121,8 @@ def StartButton():
                     messagebox.showerror("ERROR", "Please Enter Vamp Value Between 1mV - 250mV")
                 elif CheckPulse < 0.4 or CheckPulse > 1000 :
                     messagebox.showerror("ERROR", "Please Enter TPulse Value Between 0.4ms - 1000 ms")
+                elif CheckPulse >= ((CheckIncrement/CheckScanRate) * 1000000) / 2  :
+                    messagebox.showerror("ERROR", "TPulse Value is Too Big")
                 elif CheckSampling <= 0 :
                     messagebox.showerror("ERROR", "Please Enter Tsampling Greater Than 0")
                 else :
@@ -223,6 +225,8 @@ def StartButton():
                     y1 = []
                     y2 = []
                     n_cycle = int(cycle_var.get())
+                    axis_min = float(vmin_var.get())
+                    axis_max = float(vmax_var.get())
 
                     for row in reader :
                         if len(row) == 3 :
@@ -258,7 +262,7 @@ def StartButton():
                         #Calulate Concentration
                         if ion1.get() == "K" and ion2.get() == "None" :      
                             result1.insert(0, K_Concentration1)
-                        elif ion1.get1() == "Na" and ion2.get() == "None":
+                        elif ion1.get() == "Na" and ion2.get() == "None":
                             result1.insert(0, Na_Concentration1)
 
                         #Plotting the Data from CSV
@@ -266,7 +270,7 @@ def StartButton():
                         plt.xlabel("Voltage(V)")
                         plt.ylabel("Current(µA)")
                         plt.title("Voltammogram")
-                        plt.axis([-1.5, 1.5, min_current1, max_current1])
+                        plt.axis([axis_min, axis_max, min_current1, max_current1])
                         plt.grid('on')
                         plt.show()
 
@@ -323,7 +327,7 @@ def StartButton():
                         plt.subplot(211).set_title("Channel 1")
                         plt.xlabel("Voltage(V)")
                         plt.ylabel("Current(µA)")
-                        plt.axis([-1.5, 1.5, min_current1, max_current1])
+                        plt.axis([axis_min, axis_max, min_current1, max_current1])
                         plt.grid('on')
 
                         #Subplot for channel 2
@@ -331,7 +335,7 @@ def StartButton():
                         plt.plot(x, y2, color = 'green')
                         plt.xlabel("Voltage(V)")
                         plt.ylabel("Current(µA)")
-                        plt.axis([-1.5, 1.5, min_current2, max_current2])
+                        plt.axis([axis_min, axis_max, min_current2, max_current2])
                         plt.grid('on')
     
                         #Naming the main graph
