@@ -115,10 +115,10 @@ def StartButton():
                     messagebox.showerror("ERROR", "Vmax and Vmin Must Be a Different Value")
                 elif CheckScanRate < 10 or CheckScanRate > 120: 
                     messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
-                elif CheckIncrement < 1 or CheckIncrement > 250 :
-                    messagebox.showerror("ERROR", "Please Enter Vinc Value Between 1mV - 250mV")
-                elif CheckAmp < 1 or CheckAmp > 250 :
-                    messagebox.showerror("ERROR", "Please Enter Vamp Value Between 1mV - 250mV")
+                elif CheckIncrement < 0.001 or CheckIncrement > 0.25 :
+                    messagebox.showerror("ERROR", "Please Enter Vinc Value Between 0.001 - 0.25 V")
+                elif CheckAmp < 0.001 or CheckAmp > 0.25 :
+                    messagebox.showerror("ERROR", "Please Enter Vamp Value Between 0.001 - 0.25 V")
                 elif CheckPulse < 0.4 or CheckPulse > 1000 :
                     messagebox.showerror("ERROR", "Please Enter TPulse Value Between 0.4ms - 1000 ms")
                 elif CheckPulse >= ((CheckIncrement/CheckScanRate) * 1000000) / 2  :
@@ -191,7 +191,7 @@ def StartButton():
                         #Read a line from serial
                         line = ser.readline().decode('latin-1').strip()
                         print(line)
-                
+                        
                         #Break out of the loop if read serial data "999999999"
                         if line == "999999999" :
                             break
@@ -215,7 +215,7 @@ def StartButton():
             #except IndexError or UnicodeDecodeError or serial.serialutil.SerialException :
                 #messagebox.showerror("ERROR", "Something went wrong. Please, Try again")
             
-            #Reading the data from CSV File and Plot it
+                #Reading the data from CSV File and Plot it
                 with open(folder, 'r') as f :
                     reader = csv.reader(f, delimiter = ";")
                     next(reader)    #Skip the header row
@@ -456,8 +456,8 @@ ion2.set("")
 TextArea = tk.Label(text = "Additional Parameter For DPV Method: ").grid(column = 8, row = 3)
 
 #Additional Parameter For DPV Method
-Vincrem = tk.Label(text = "Vinc(mV) [Value between 1mV - 250mV]").grid(column = 8, row = 4) #Edit
-Amp = tk.Label(text = "Vamp(mV) [Value between 1mV - 250mV]").grid(column = 8, row = 5)
+Vincrem = tk.Label(text = "Vinc(V) [Value between 0.001V - 0.25V]").grid(column = 8, row = 4) #Edit
+Amp = tk.Label(text = "Vamp(V) [Value between 0.001V - 0.25V]").grid(column = 8, row = 5)
 Sampling = tk.Label(text = "Tsampling(ms)").grid(column = 8, row = 6)
 Pulse = tk.Label(text = "TPulse(ms) [Value between 0.4ms to 1000ms]").grid(column = 8, row = 7)
 
