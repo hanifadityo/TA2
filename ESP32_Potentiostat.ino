@@ -599,7 +599,7 @@ const float ADC_LUT2[4096] = { 0,
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  delay(3000);
+  delay(3000);  //wait for serial to initialize
   analogSetPinAttenuation(ADC1, ADC_11db);
   analogSetPinAttenuation(ADC2, ADC_11db);
   MCP4725.begin(0x60);  //The I2C Address of my modul
@@ -625,7 +625,8 @@ String getValue(String data, char separator, int index)
 }
 
 
-void loop() {
+void loop() 
+{
   //Serial.print("TEST PLEASE!");
   while (Serial.available() > 0){
     //Getting serial data from desktop app
@@ -658,7 +659,7 @@ void loop() {
 
     //Conditional regarding method being used
     switch(metode){
-      case 1: //CV Method
+      case 1 : //CV Method
         VinMin = (32500 * (0.0000465 + Wmin / 29700))+0.15; //hasil pengukuran nilai resistansi real
         BatasMin = VinMin * 4095 / 3.3;
         VinMax = (32500 * (0.0000465 + Wmax / 29700))+0.15;
@@ -670,7 +671,8 @@ void loop() {
 
         uint32_t level; //level =4095
         int i; //iterasi untuk jumlah cycle
-        for (i = 0; i < cycle; i++) {
+        for (i = 0; i < cycle; i++) 
+        {
           int j = 0; //iterasi untuk jumlah data yang masuk dan difilter
         
           //scanning dalam arah forward
@@ -773,24 +775,28 @@ void loop() {
                 break;
             }
         
-            if (j < 8) {
+            if (j < 8) 
+            {
               //level = level - scanRate;
               j++;
               unsigned long fin = micros();
               float durasi = fin - init;
               delay(interval - (durasi * 0.001)); //membuang 8 data output sinyal terfilter pertama, karena pada saat itu sinyal keluaran belum stabil
             }
-            else {
+            else 
+            {
               float val_out1 = (3.3 * filtered_signal / 4095); //resolusi ADC = 12 bit = 4095 level
               float val_out2 = (3.3 * filtered_signal2 / 4095); //resolusi ADC = 12 bit = 4095 level
               Iin1 = -(0.00099 - (val_out1 / 1485));//persamaan TIA dengan resistor 1.5k dan 4.7k
               Iin2 = -(0.00099 - (val_out2 / 1490));//persamaan TIA dengan resistor 1.5k dan 4.7k
               unsigned long time_count = micros();
 
-              if (ChannelNum == 1){
+              if (ChannelNum == 1)
+              {
                 Serial.println(Iin2 * 1000000, 4);
               }
-              if (ChannelNum == 2){
+              if (ChannelNum == 2)
+              {
                 Serial.print(Iin2 * 1000000, 4); //Print arus dalam satuan mikro Ampere
                 Serial.print(";");
                 Serial.println(Iin1 * 1000000, 4); //Print arus dalam satuan mikro Ampere
@@ -801,13 +807,11 @@ void loop() {
               delay(interval - (durasi * 0.001));
               //Serial.println(durasi, 10);
             }
-            //unsigned long time_count = micros();
-            //Serial.println(time_count, 10);
-            //Serial.print("\t");
           }
 
           // ARAH REVERSE
-          for (level = BatasMax - 8; level >= BatasMin - 8; level--) {
+          for (level = BatasMax - 8; level >= BatasMin - 8; level--) 
+          {
             unsigned long init = micros();
             //dacWrite(DAC, level);
             MCP4725.setVoltage(level, false);
@@ -826,14 +830,13 @@ void loop() {
               float durasi = fin - init;
               delay(interval - (durasi * 0.001));
             }
+            
             init = micros();
             int val11 = analogRead(ADC1);
             int val21 = analogRead(ADC2);
 
-        
             int val12 = analogRead(ADC1);
             int val22 = analogRead(ADC2);
-        
         
             int val13 = analogRead(ADC1);
             int val23 = analogRead(ADC2);
@@ -909,6 +912,7 @@ void loop() {
               float durasi = fin - init;
               delay(interval - (durasi * 0.001)); //membuang 8 data output sinyal terfilter pertama, karena pada saat itu sinyal keluaran belum stabil
             }
+
             else {
               float val_out1 = (3.3 * filtered_signal / 4095); //resolusi ADC = 12 bit = 4095 level
               float val_out2 = (3.3 * filtered_signal2 / 4095); //resolusi ADC = 12 bit = 4095 level
@@ -918,14 +922,18 @@ void loop() {
               Iin2 = -(0.00099 - (val_out2 / 1490));//persamaan TIA dengan resistor 1.5k dan 4.7k
               unsigned long time_count = micros();
           
-              if (ChannelNum == 1){
+              if (ChannelNum == 1)
+              {
                 Serial.println(Iin2 * 1000000, 4);
-            }
-              if (ChannelNum == 2){
+              }
+              
+              if (ChannelNum == 2)
+              {
                 Serial.print(Iin2 * 1000000, 4); //Print arus dalam satuan mikro Ampere
                 Serial.print(";");
                 Serial.println(Iin1 * 1000000, 4); //Print arus dalam satuan mikro Ampere
               }
+              
               j++;
               unsigned long fin = micros();
               float durasi = fin - init;
@@ -938,13 +946,10 @@ void loop() {
 
       case 2 : //DPV Method
         tbase = abs((Wincrement/ScanRate*1000000) - Wpulse);
-        //Wmax = Wmax +(Wampin*4*0.05);
-      
-        //uint32_t level; //level =4095
-        //int i; //iterasi untuk jumlah cycle
         Wmin = Wmin - Wampin;
       
-        for (Wmin; Wmin <= Wmax; Wmin=Wmin+Wincrement) {
+        for (Wmin; Wmin <= Wmax; Wmin=Wmin+Wincrement) 
+        {
           VinMin = (32500 * (0.0000465 + Wmin / 29700))+0.15; //hasil pengukuran nilai resistansi real
           BatasMin = VinMin * 4095 / 3.3;
           VinMax = (32500 * (0.0000465 + Wmax / 29700))+0.15;
@@ -954,9 +959,8 @@ void loop() {
           time_need = 1000000 * ((Wmax - Wmin) / (ScanRate * level_value));
           interval = time_need / 2;
           int j = 0; //iterasi untuk jumlah data yang masuk dan difilter
-            //scanning dalam arah forward
-  
-      
+          //scanning dalam arah forward
+
           level = BatasMin; //level =255
           float counter = 0;
           int counterBase = 0;
@@ -966,9 +970,8 @@ void loop() {
           float nilaiI = 0;
           float nilaiI2 = 0;
           float arus1,arus2;
-      
-      
-          while(counter <= (tbase/Tsampling)) 
+
+          while (counter <= (tbase/Tsampling) ) 
           {  
             unsigned long init = micros();
             MCP4725.setVoltage(level, false);
@@ -1036,6 +1039,7 @@ void loop() {
                 filtered_temp2[j] = filtered_signal2;
 
                 break;
+
               default:
                 filtered_signal1 = 0.982405793108396 * filtered_temp1[(j - 1) % 2] + 0.0913149004358320   * float(calibratedReading1) + 0.182629800871664 * temp1[(j - 1) % 2] - 0.347665394851723 * filtered_temp1[(j - 2) % 2] + 0.0913149004358320 * temp1[(j - 2) % 2];
                 temp1[j % 2] = float(calibratedReading1);
@@ -1051,31 +1055,13 @@ void loop() {
             //float val_out = 3.3 * filtered_signal / 4095; //resolusi ADC = 12 bit = 4095 level
             float val_out1 = 3.3 * filtered_signal1 / 4095; //resolusi ADC = 12 bit = 4095 level
             float val_out2 = 3.3 * filtered_signal2 / 4095; //resolusi ADC = 12 bit = 4095 level
-    //              Serial.print("Base");
-    //              Serial.print("\t");
-    //              Serial.print(Vout);
-    //              Serial.print ("\t");
-    //              Serial.print(val_out1,4);
-    //              Serial.print ("\t");
-    //              Serial.print(val_out2,4);
-    //              Serial.print ("\n");
-                if (counter > (tbase/Tsampling)/2)
-                {
-                  nilaiV1 = nilaiV1 + val_out1;
-                  nilaiV2 = nilaiV2 + val_out2;
-                  counterBase++;
-                  
-                  // UNTUK CEK TEGANGAN OUTPUT
-    //              Serial.print("Base");
-    //              Serial.print("\t");
-    //              Serial.print(Vout);
-    //              Serial.print ("\t");
-    //              Serial.print(nilaiV1,4);
-    //              Serial.print ("\t");
-    //              Serial.print(nilaiV2,4);
-    //              Serial.print ("\n");
-    //              
-                }             
+                
+            if (counter > (tbase/Tsampling)/2)
+            {
+              nilaiV1 = nilaiV1 + val_out1;
+              nilaiV2 = nilaiV2 + val_out2;
+              counterBase++;       
+            }             
            
             j++;
 
@@ -1090,25 +1076,11 @@ void loop() {
           nilaiVrata1 = nilaiV1/counterBase;
           nilaiVrata2 = nilaiV2/counterBase;
       
-    // UNTUK CEK TEGANGAN OUTPUT
-    //      Serial.print("Base");
-    //      Serial.print("\t");
-    //      Serial.print(nilaiVrata1,4);
-    //      Serial.print("\t");
-    //      Serial.println(nilaiVrata2,4);
-      
-          Iin1 = -(0.00099 - (nilaiVrata1 / 1485));//persamaan TIA dengan resistor 1.5k dan 4.7k
+          Iin1 = -(0.00099 - (nilaiVrata1 / 1485)); //persamaan TIA dengan resistor 1.5k dan 4.7k
           arus1 = Iin1 * 1000000;
 
-          Iin2 = -(0.00099 - (nilaiVrata2 / 1490));//persamaan TIA dengan resistor 1.5k dan 4.7k
+          Iin2 = -(0.00099 - (nilaiVrata2 / 1490)); //persamaan TIA dengan resistor 1.5k dan 4.7k
           arus2 = Iin2 * 1000000;
-
-    // UNTUK CEK TEGANGAN INPUT
-    //      Serial.print(Vout,4);
-    //      Serial.print("\t");
-    //      Serial.print(micros()/10^6);
-    //      Serial.print("\n");
-      
 
           Vampin = Wmin + Wampin;
           Vpulse = (32500 * (0.0000465 + Vampin / 29700))+0.15; //hasil pengukuran nilai resistansi real
@@ -1124,7 +1096,8 @@ void loop() {
           float nilaiI33 = 0;
           float arus11,arus22,arus33;
       
-          while(counter <= (Wpulse/Tsampling)) { 
+          while(counter <= (Wpulse/Tsampling)) 
+          { 
             unsigned long init = micros();
             //dacWrite(DAC, level);
             MCP4725.setVoltage(level, false);
@@ -1136,7 +1109,6 @@ void loop() {
             int val11 = analogRead(ADC1);
             int val21 = analogRead(ADC2);
 
-        
             int val12 = analogRead(ADC1);
             int val22 = analogRead(ADC2);
         
@@ -1204,31 +1176,16 @@ void loop() {
 
                 break;
             }
+
             float val_out1 = 3.3 * filtered_signal1 / 4095; //resolusi ADC = 12 bit = 4095 level
             float val_out2 = 3.3 * filtered_signal2 / 4095; //resolusi ADC = 12 bit = 4095 level
-    //              Serial.print("Vpulse");
-    //              Serial.print("\t");
-    //              Serial.print(Vout);
-    //              Serial.print ("\t");
-    //              Serial.print(val_out1,4);
-    //              Serial.print ("\t");
-    //              Serial.print(val_out2,4);
-    //              Serial.print ("\n");
         
-                if (counter > (Wpulse/Tsampling)/2){
-                  nilaiV11 = nilaiV11 + val_out1;
-                  nilaiV22 = nilaiV22 + val_out2;
-                  counterPulse++;
-                  // UNTUK CEK TEGANGAN OUTPUT
-    //               Serial.print("Vpulse");
-    //              Serial.print("\t");
-    //              Serial.print(Vout);
-    //              Serial.print ("\t");
-    //              Serial.print(nilaiV11,4);
-    //              Serial.print ("\t");
-    //              Serial.print(nilaiV22,4);
-    //              Serial.print ("\n");          
-                  }
+            if (counter > (Wpulse/Tsampling)/2)
+            {
+              nilaiV11 = nilaiV11 + val_out1;
+              nilaiV22 = nilaiV22 + val_out2;
+              counterPulse++;
+            }
 
             j++;
 
@@ -1238,81 +1195,52 @@ void loop() {
             counter++;
 
             i++;
-         }
-      
-          // UNTUK CEK TEGANGAN RATA
-    //      Serial.print(nilaiV1);
-    //      Serial.print("\t");
-    //      Serial.print(nilaiV2);
-    //      Serial.print("\t");
-    //      Serial.print(nilaiV11);
-    //      Serial.print("\t");
-    //      Serial.println(nilaiV22);
-    //      
+          }
+
           nilaiVrata11 = nilaiV11/counterPulse;
           nilaiVrata22 = nilaiV22/counterPulse;
-  
-    // UNTUK CEK TEGANGAN OUTPUT
-    //      Serial.print("Pulse");
-    //      Serial.print("\t");
-    //      Serial.print(nilaiVrata11,4);
-    //      Serial.print("\t");
-    //      Serial.println(nilaiVrata22,4);
 
           Iin1 = -(0.00099 - (nilaiVrata11 / 1485));//persamaan TIA dengan resistor 1.5k dan 4.7k
           arus11 = Iin1 * 1000000;
           Iin2 = -(0.00099 - (nilaiVrata22 / 1490));//persamaan TIA dengan resistor 1.5k dan 4.7k
           arus22 = Iin2 * 1000000;
- 
-    // UNTUK CEK TEGANGAN INPUT
-    //      Serial.print(Vampin,4);
-    //      Serial.print("\t");
-    //      Serial.print(micros()/10^6);
-    //      Serial.print("\n");
 
           float ArusFinal1 = arus11 - arus1;//channel1
           float ArusFinal2 = arus22 - arus2;//channel2
 
-    // CEK SELISIH
-    //          Serial.print(Vampin,4);
-    //          Serial.print("\t");
-    //          Serial.print(arus1,4);
-    //          Serial.print("\t");
-    //          Serial.print(arus11,4);
-    //          Serial.print("\t");
-    //          Serial.print(arus2,4);
-    //          Serial.print("\t");
-    //          Serial.println(arus22,4);
-
-
-        // CEK OUTPUT FIX
-            if (ChannelNum ==1)
-            {
+          // CEK OUTPUT FIX
+          switch (ChannelNum){
+            case 1 : //1 Channel
               Serial.print(Vampin,4);
               Serial.print(";");
               Serial.println(abs(ArusFinal2),4);
-                if (Vampin > Wmax) {
-                  Serial.println("999999999");
-                  delay(100000);
+              if (Vampin >= Wmax) 
+              {
+                Serial.println("999999999");
+                break;
+                //delay(3000);
               }
-            }
-            if (ChannelNum == 2)
-            {
+              break;
+        
+            case 2 : //2 Channels
               Serial.print(Vampin,4);
               Serial.print(";");
               Serial.print(abs(ArusFinal2),4);
               Serial.print(";");
               Serial.println(abs(ArusFinal1),4);
-                if (Vampin > Wmax) {
-                  Serial.println("999999999");
-                  delay(100000);
-                }
-            }
+              if (Vampin >= Wmax) 
+              {
+                Serial.println("999999999");
+                break;
+                //delay(3000);
+              }
+              break;
           }
+        }
         break;
 
-      default:
-        //invalid choice, do nothing
+      default :
+        Serial.println("");
         break;
     }
   }
