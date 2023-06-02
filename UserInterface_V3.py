@@ -86,12 +86,201 @@ def StartButton():
                     messagebox.showerror("ERROR", "Please Enter Scan Rate Value Between 10 - 120 mV/s")
                 elif CheckCycle <= 0 : 
                     messagebox.showerror("ERROR", "Please Enter Cycle Value Greater Than 0")
-                elif CheckCycle < 1 or CheckCycle > 255 :
+                elif CheckCycle < 2 or CheckCycle > 255 :
                     messagebox.showerror("ERROR", "Please Enter Cycle Value Between 2 - 255")
                 else :
                     valid = True    #All user input is valid
             except ValueError : #Return error if not a number
                 messagebox.showerror("ERROR", "Parameter must be a number")
+
+            valid2 = False
+            #Validate Ion Type in channel 2 if using only 1 channel
+            if inputchannelnumber.get() == '1' and ion2.get() != "None":
+                messagebox.showerror("ERROR", "Please Set 'Ion Sample Type for Channel 2' to None")
+            # Validate ion type in channel 2 if using all channels
+            elif inputchannelnumber.get() == '2' and ion2.get() == 'None' :
+                messagebox.showerror("ERROR", "Please Set 'Ion Sample Type for Channel 2' to K or Na")
+            else :
+                valid2 = True
+
+            #All user parameter input is valid
+            if valid == True and valid2 == True :
+                parameter = inputmethod.get() + "|" + vmin_var.get() + "|" + vmax_var.get() +  "|" + scanrate_var.get() + "|" + cycle_var.get() + "|" + inputchannelnumber.get() + "|" + ion1.get() + "|" + ion2.get() + "|" + vincrem_var.get() + "|" + amp_var.get() + "|" + sampling_var.get() + "|" + pulse_var.get() 
+                messagebox.showinfo("INFO", "Make sure the filename and parameters are correct.\nYour filename is "+inputfilename.get()+".csv.\nYour parameter is "+parameter+".\nPlease click 'OK' to continue the process.\n Wait until the plot is shown.\n The file will be saved in " + parent_folder) 
+        
+                file_name = inputfilename.get()+".csv"
+
+                input_parameter = methodnumber+"|"+vmin_var.get()+"|"+vmax_var.get()+"|"+vincrem_var.get()+"|"+scanrate_var.get()+"|"+cycle_var.get()+"|"+sampling_var.get()+"|"+amp_var.get()+"|"+pulse_var.get()+"|"+inputchannelnumber.get()+ "|" + ion1.get() + "|" + ion2.get()
+                string1 = input_parameter
+                string1_encode = string1.encode()
+
+                #Save data in folder
+                folder = os.path.join(path_file, file_name)
+        
+                #Find an available serial port
+                ser = None  #Define ser variable 
+
+                #Get a list of all available ports
+                ports = serial.tools.list_ports.comports()
+
+                #try : 
+                for port in ports :
+                    try :
+                        ser = serial.Serial(port = port.device, baudrate = 115200)
+                        ser.parity = serial.PARITY_NONE
+                        ser.bytesize = serial.EIGHTBITS
+                        ser.stopbits = serial.STOPBITS_ONE
+                        break
+                    except :
+                        pass
+                else :
+                    messagebox.showerror("ERROR", "Could not connect to any ports")
+    
+                if ser is not None :
+                    #clear the input buffer / Flush the input buffer
+                    ser.flushInput()
+
+                    #Write data to ESP32
+                    ser.write(string1_encode)
+
+                    #Open the CSV file for writing
+                    with open(folder, 'a', newline="") as f :
+                        writer = csv.writer(f, delimiter = ";")
+                        writer.writerow(["Voltage", "Current_1", "Current_2"])  #Write header in csv file for the first row
+            
+                        #Reading data from serial port
+                        #Retrieving data from Serial Communication
+                        while True :
+                            #Read a line from serial
+                            line = ser.readline().decode('latin-1').strip()
+                            print(line)
+                        
+                            #Break out of the loop if read serial data "999999999"
+                            if line == "999999999" :
+                                break
+            
+                            data = line.split(';')
+
+                            if len(data) == 2 :
+                                writer.writerow([data[0], data[1]])
+
+                            elif len(data) == 3 :
+                                writer.writerow([data[0], data[1], data[2]])
+                    
+                            progress_bar.update()
+
+                            #if progress_bar.count >= max_rows :
+                                #  break
+
+                    #Close the serial plot
+                    ser.close()
+
+                #except IndexError or UnicodeDecodeError or serial.serialutil.SerialException :
+                    #messagebox.showerror("ERROR", "Something went wrong. Please, Try again")
+            
+                    #Reading the data from CSV File and Plot it
+                    with open(folder, 'r') as f :
+                        reader = csv.reader(f, delimiter = ";")
+                        next(reader)    #Skip the header row
+                        #reader2 = next(reader1)
+
+                        #Define variable of array
+                        x = []
+                        y1 = []
+                        y2 = []
+                        axis_min = float(vmin_var.get())
+                        axis_max = float(vmax_var.get())
+                        
+                
+                        for row in reader:
+                            if len(row) == 3 :
+                                x.append(float(row[0]))
+                                y1.append(float(row[1]))
+                                y2.append(float(row[2]))
+                            elif len(row) == 2 :
+                                x.append(float(row[0]))
+                                y1.append(float(row[1]))
+                        
+                        #Check number of channel that being used
+                        if len(y1) > 0 and len(y2) == 0 :   #1 Channel only
+                            UpperRange1 = len(y1) + 1
+
+                            #slice the array for CV
+                            
+                            values_in_range_CV = y1[5413:UpperRange1]
+                            CV_max_current1 = max(values_in_range_CV)
+                            CV_min_current1 = min(values_in_range_CV)
+                            FeCN_Concentration1 = 0.21372 * CV_max_current1 + 0.737816 
+                            FeCN_Concentration1 = round(FeCN_Concentration1, 4)
+
+                            messagebox.showinfo("SUCCESS", "Measurement Completed!")
+
+                            #Show Concentration
+                            if ion1.get() == 'FeCN' and ion2.get() == 'None':
+                                result1.insert(0, FeCN_Concentration1)
+
+                        
+                            filtered_x = [value for index, value in enumerate(x) if index > 5413]
+                            filtered_y1 = [value for index, value in enumerate(y1) if index > 5413]
+                            #Plotting the Data from CSV
+                            plt.plot(filtered_x, filtered_y1, color = 'red')
+                            plt.xlabel("Voltage(V)")
+                            plt.ylabel("Current(µA)")
+                            plt.title("Voltammogram")
+                            plt.axis([axis_min, axis_max, CV_min_current1, CV_max_current1])
+                            plt.grid('on')
+                            plt.show()
+                            
+                        elif len(y1) > 0 and len(y2) > 0 :    #Using 2 channel
+                            #Find maximum value in desired range
+                            UpperRange1 = len(y1) + 1                       #Upper range of index in channel 1 
+                            UpperRange2 = len(y2) + 1                       #Upper range of index in channel 2
+
+                            #Slicing array for CV
+                            values_in_range_CV_1 = y1[5413:UpperRange1]
+                            values_in_range_CV_2 = y2[5413:UpperRange2]
+                            CV_max_current1 = max(values_in_range_CV_1)
+                            CV_max_current2 = max(values_in_range_CV_2)
+                            CV_min_current1 = min(values_in_range_CV_1)
+                            CV_min_current2 = min(values_in_range_CV_2)
+                            FeCN_Concentration1 = 0.21372 * CV_max_current1 + 0.737816
+                            FeCN_Concentration2 = 0.21372 * CV_max_current2 + 0.737816
+
+                            messagebox.showinfo("SUCCESS", "Measurement Completed!")
+
+                            if ion1.get() == "FeCN" and ion2.get() == "FeCN":
+                                result1.insert(0, FeCN_Concentration1)
+                                result2.insert(0, FeCN_Concentration2)
+                                
+                        
+                            filtered_x = [value for index, value in enumerate(x) if index > 5413]
+                            filtered_y1 = [value for index, value in enumerate(y1) if index > 5413]
+                            filtered_y2 = [value for index, value in enumerate(y2) if index > 5413]
+
+                            #Subplot for Channel 1  
+                            plt.subplot(211)
+                            plt.plot(filtered_x, filtered_y1, color= 'red')
+                            plt.subplot(211).set_title("Channel 1")
+                            plt.xlabel("Voltage(V)")
+                            plt.ylabel("Current(µA)")
+                            plt.axis([axis_min, axis_max, CV_min_current1, CV_max_current1])
+                            plt.grid('on')
+
+                            #Subplot for channel 2
+                            plt.subplot(212)
+                            plt.plot(filtered_x, filtered_y2, color = 'green')
+                            plt.xlabel("Voltage(V)")
+                            plt.ylabel("Current(µA)")
+                            plt.axis([axis_min, axis_max, CV_min_current2, CV_max_current2])
+                            plt.grid('on')
+        
+                            #Naming the main graph
+                            plt.suptitle("Voltammogram")   
+                            plt.show()
+
+                        else :
+                            messagebox.showerror("ERROR", "ERROR")
+
     
         #Validate user input (DPV Parameter)
         elif methodnumber == '2':
@@ -132,151 +321,124 @@ def StartButton():
             except ValueError :
                 messagebox.showerror("ERROR", "Parameter must be a number")
         
-        valid2 = False
-        #Validate Ion Type in channel 2 if using only 1 channel
-        if inputchannelnumber.get() == '1' and ion2.get() != "None":
-            messagebox.showerror("ERROR", "Please Set 'Ion Sample Type for Channel 2' to None")
-        # Validate ion type in channel 2 if using all channels
-        elif inputchannelnumber.get() == '2' and ion2.get() == 'None' :
-            messagebox.showerror("ERROR", "Please Set 'Ion Sample Type for Channel 2' to K or Na")
-        else :
-            valid2 = True
-
-        #All user parameter input is valid
-        if valid == True and valid2 == True :
-            parameter = inputmethod.get() + "|" + vmin_var.get() + "|" + vmax_var.get() +  "|" + scanrate_var.get() + "|" + cycle_var.get() + "|" + inputchannelnumber.get() + "|" + ion1.get() + "|" + ion2.get() + "|" + vincrem_var.get() + "|" + amp_var.get() + "|" + sampling_var.get() + "|" + pulse_var.get() 
-            messagebox.showinfo("INFO", "Make sure the filename and parameters are correct.\nYour filename is "+inputfilename.get()+".csv.\nYour parameter is "+parameter+".\nPlease click 'OK' to continue the process.\n Wait until the plot is shown.\n The file will be saved in " + parent_folder) 
-        
-            file_name = inputfilename.get()+".csv"
-
-            input_parameter = methodnumber+"|"+vmin_var.get()+"|"+vmax_var.get()+"|"+vincrem_var.get()+"|"+scanrate_var.get()+"|"+cycle_var.get()+"|"+sampling_var.get()+"|"+amp_var.get()+"|"+pulse_var.get()+"|"+inputchannelnumber.get()+ "|" + ion1.get() + "|" + ion2.get() + "|"
-            string1 = input_parameter
-            string1_encode = string1.encode()
-
-            #Save data in folder
-            folder = os.path.join(path_file, file_name)
-        
-            #Find an available serial port
-            ser = None  #Define ser variable 
-
-            #Get a list of all available ports
-            ports = serial.tools.list_ports.comports()
-
-            #try : 
-            for port in ports :
-                try :
-                    ser = serial.Serial(port = port.device, baudrate = 115200)
-                    ser.parity = serial.PARITY_NONE
-                    ser.bytesize = serial.EIGHTBITS
-                    ser.stopbits = serial.STOPBITS_ONE
-                    break
-                except :
-                    pass
+            valid2 = False
+            #Validate Ion Type in channel 2 if using only 1 channel
+            if inputchannelnumber.get() == '1' and ion2.get() != "None":
+                messagebox.showerror("ERROR", "Please Set 'Ion Sample Type for Channel 2' to None")
+            # Validate ion type in channel 2 if using all channels
+            elif inputchannelnumber.get() == '2' and ion2.get() == 'None' :
+                messagebox.showerror("ERROR", "Please Set 'Ion Sample Type for Channel 2' to K or Na")
+            elif ion1.get() == "Calibration" or ion2.get() == "Calibration" :
+                messagebox.showerror("ERROR", "Calibration can only be conducted by using the CV method")
             else :
-                messagebox.showerror("ERROR", "Could not connect to any ports")
+                valid2 = True
+
+            #All user parameter input is valid
+            if valid == True and valid2 == True :
+                parameter = inputmethod.get() + "|" + vmin_var.get() + "|" + vmax_var.get() +  "|" + scanrate_var.get() + "|" + cycle_var.get() + "|" + inputchannelnumber.get() + "|" + ion1.get() + "|" + ion2.get() + "|" + vincrem_var.get() + "|" + amp_var.get() + "|" + sampling_var.get() + "|" + pulse_var.get() 
+                messagebox.showinfo("INFO", "Make sure the filename and parameters are correct.\nYour filename is "+inputfilename.get()+".csv.\nYour parameter is "+parameter+".\nPlease click 'OK' to continue the process.\n Wait until the plot is shown.\n The file will be saved in " + parent_folder) 
+        
+                file_name = inputfilename.get()+".csv"
+
+                input_parameter = methodnumber+"|"+vmin_var.get()+"|"+vmax_var.get()+"|"+vincrem_var.get()+"|"+scanrate_var.get()+"|"+cycle_var.get()+"|"+sampling_var.get()+"|"+amp_var.get()+"|"+pulse_var.get()+"|"+inputchannelnumber.get()+ "|" + ion1.get() + "|" + ion2.get()
+                string1 = input_parameter
+                string1_encode = string1.encode()
+
+                #Save data in folder
+                folder = os.path.join(path_file, file_name)
+        
+                #Find an available serial port
+                ser = None  #Define ser variable 
+
+                #Get a list of all available ports
+                ports = serial.tools.list_ports.comports()
+
+                #try : 
+                for port in ports :
+                    try :
+                        ser = serial.Serial(port = port.device, baudrate = 115200)
+                        ser.parity = serial.PARITY_NONE
+                        ser.bytesize = serial.EIGHTBITS
+                        ser.stopbits = serial.STOPBITS_ONE
+                        break
+                    except :
+                        pass
+                else :
+                    messagebox.showerror("ERROR", "Could not connect to any ports")
     
-            if ser is not None :
-                #clear the input buffer / Flush the input buffer
-                ser.flushInput()
+                if ser is not None :
+                    #clear the input buffer / Flush the input buffer
+                    ser.flushInput()
 
-                #Write data to ESP32
-                ser.write(string1_encode)
+                    #Write data to ESP32
+                    ser.write(string1_encode)
 
-                print(methodnumber)
-
-                #Open the CSV file for writing
-                with open(folder, 'a', newline="") as f :
-                    writer = csv.writer(f, delimiter = ";")
-                    writer.writerow(["Voltage", "Current_1", "Current_2"])  #Write header in csv file for the first row
+                    #Open the CSV file for writing
+                    with open(folder, 'a', newline="") as f :
+                        writer = csv.writer(f, delimiter = ";")
+                        writer.writerow(["Voltage", "Current_1", "Current_2"])  #Write header in csv file for the first row
             
-                    #Reading data from serial port
-                    #Retrieving data from Serial Communication
-                    while True :
-                        #Read a line from serial
-                        line = ser.readline().decode('latin-1').strip()
-                        print(line)
+                        #Reading data from serial port
+                        #Retrieving data from Serial Communication
+                        while True :
+                            #Read a line from serial
+                            line = ser.readline().decode('latin-1').strip()
+                            print(line)
                         
-                        #Break out of the loop if read serial data "999999999"
-                        if line == "999999999" :
-                            break
+                            #Break out of the loop if read serial data "999999999"
+                            if line == "999999999" :
+                                break
             
-                        data = line.split(';')
+                            data = line.split(';')
 
-                        if len(data) == 2 :
-                            writer.writerow([data[0], data[1]])
+                            if len(data) == 2 :
+                                writer.writerow([data[0], data[1]])
 
-                        elif len(data) == 3 :
-                            writer.writerow([data[0], data[1], data[2]])
+                            elif len(data) == 3 :
+                                writer.writerow([data[0], data[1], data[2]])
                     
-                        progress_bar.update()
+                            progress_bar.update()
 
-                        #if progress_bar.count >= max_rows :
-                            #break
-
-                #Close the serial plot
-                ser.close()
-
-            #except IndexError or UnicodeDecodeError or serial.serialutil.SerialException :
-                #messagebox.showerror("ERROR", "Something went wrong. Please, Try again")
-            
-                #Reading the data from CSV File and Plot it
-                with open(folder, 'r') as f :
-                    reader = csv.reader(f, delimiter = ";")
-                    next(reader)    #Skip the header row
-                    #reader2 = next(reader1)
-
-                    #Define variable of array
-                    x = []
-                    y1 = []
-                    y2 = []
-                    n_cycle = int(cycle_var.get())
-                    axis_min = float(vmin_var.get())
-                    axis_max = float(vmax_var.get())
-                    
                 
-                    for row in reader:
-                        if len(row) == 3 :
-                            x.append(float(row[0]))
-                            y1.append(float(row[1]))
-                            y2.append(float(row[2]))
-                        elif len(row) == 2 :
-                            x.append(float(row[0]))
-                            y1.append(float(row[1]))
+                    #Close the serial plot
+                    ser.close()
 
-                    if methodnumber == "2" :  #method DPV
-                        next(reader)
-                        for row in reader :
+                #except IndexError or UnicodeDecodeError or serial.serialutil.SerialException :
+                    #messagebox.showerror("ERROR", "Something went wrong. Please, Try again")
+            
+                    #Reading the data from CSV File and Plot it
+                    with open(folder, 'r') as f :
+                        reader = csv.reader(f, delimiter = ";")
+                        next(reader)    #Skip the header row
+                        next(reader)    #skip the second row in DPV data
+
+                        #Define variable of array
+                        x = []
+                        y1 = []
+                        y2 = []
+                        axis_min = float(vmin_var.get())
+                        axis_max = float(vmax_var.get())
+                
+                        for row in reader:
                             if len(row) == 3 :
                                 x.append(float(row[0]))
                                 y1.append(float(row[1]))
                                 y2.append(float(row[2]))
-                            elif len(row) == 2:
+                            elif len(row) == 2 :
                                 x.append(float(row[0]))
-                                y1.append(float(row[1]))                
+                                y1.append(float(row[1]))               
 
-                    #Check number of channel that being used
-                    if len(y1) > 0 and len(y2) == 0 :   #1 Channel only
-                        UpperRange1 = len(y1) + 1
-
-                        #slice the array for CV
-                        if methodnumber == '1':
-                            values_in_range_CV = y1[5413:UpperRange1]
-                            CV_max_current1 = max(values_in_range_CV)
-                            CV_min_current1 = min(values_in_range_CV)
-                            FeCN_Concentration1 = 0.21372 * CV_max_current1 + 0.737816 
-                            FeCN_Concentration1 = round(FeCN_Concentration1, 4)
-                            #Show Concentration
-                            if ion1.get() == 'FeCN' and ion2.get() == 'None':
-                                result1.insert(0, FeCN_Concentration1)
-
-
-                        else :   
+                        #Check number of channel that being used
+                        if len(y1) > 0 and len(y2) == 0 :   #1 Channel only
+                            UpperRange1 = len(y1) + 1
                             max_current1 = max(y1)  #Finding the maximum value of current in channel 1
                             min_current1 = min(y1)  #Findign the minimum value of current in channel 1
                             K_Concentration1 =  1.720193 * max_current1 - 55.3448    #Concentration Estimation of K
                             K_Concentration1 = round(K_Concentration1, 4)   #Round the number to 4 decimal places
                             Na_Concentration1 = 2.370854 * max_current1 - 138.698   #Concentration Estimation of Na
                             Na_Concentration1 = round(Na_Concentration1, 4) #Round the number to 4 decimal places
+
+                            messagebox.showinfo("SUCCESS", "Measurement Completed!")
         
                             #Calulate Concentration
                             if ion1.get() == "K" and ion2.get() == "None" :      
@@ -284,19 +446,6 @@ def StartButton():
                             elif ion1.get() == "Na" and ion2.get() == "None":
                                 result1.insert(0, Na_Concentration1)
                         
-                        if methodnumber == 1 :
-                            filtered_x = [value for index, value in enumerate(x) if index > 5413]
-                            filtered_y1 = [value for index, value in enumerate(y1) if index > 5413]
-                            #Plotting the Data from CSV
-                            plt.plot(filtered_x, filtered_y1, color = 'red')
-                            plt.xlabel("Voltage(V)")
-                            plt.ylabel("Current(µA)")
-                            plt.title("Voltammogram")
-                            plt.axis([axis_min, axis_max, CV_min_current1, CV_max_current1])
-                            plt.grid('on')
-                            plt.show()
-                        
-                        else : #methodnumber == 2 (DPV)
                             #Plotting the Data from CSV
                             plt.plot(x, y1, color = 'red')
                             plt.xlabel("Voltage(V)")
@@ -306,27 +455,11 @@ def StartButton():
                             plt.grid('on')
                             plt.show()
 
+                        elif len(y1) > 0 and len(y2) > 0 :    #Using 2 channel
+                            #Find maximum value in desired range
+                            UpperRange1 = len(y1) + 1                       #Upper range of index in channel 1 
+                            UpperRange2 = len(y2) + 1                       #Upper range of index in channel 2
 
-                    elif len(y1) > 0 and len(y2) > 0 :    #Using 2 channel
-                        #Find maximum value in desired range
-                        UpperRange1 = len(y1) + 1                       #Upper range of index in channel 1 
-                        UpperRange2 = len(y2) + 1                       #Upper range of index in channel 2
-
-                        #Slicing array for CV
-                        if methodnumber == '1' :
-                            values_in_range_CV_1 = y1[5413:UpperRange1]
-                            values_in_range_CV_2 = y2[5413:UpperRange2]
-                            CV_max_current1 = max(values_in_range_CV_1)
-                            CV_max_current2 = max(values_in_range_CV_2)
-                            CV_min_current1 = min(values_in_range_CV_1)
-                            CV_min_current2 = min(values_in_range_CV_2)
-                            FeCN_Concentration1 = 0.21372 * CV_max_current1 + 0.737816
-                            FeCN_Concentration2 = 0.21372 * CV_max_current2 + 0.737816
-
-                            if ion1.get() == "FeCN" and ion2.get() == "FeCN":
-                                result1.insert(0, FeCN_Concentration1)
-                                result2.insert(0, FeCN_Concentration2)
-                        else :
                             max_current1 = max(y1)  #Finding the maximum value of current in Channel 1
                             max_current2 = max(y2)  #Finding the maximum value of current in channel 2
                             min_current1 = min(y1)  #Finding the minimum value of current in channel 1
@@ -342,7 +475,8 @@ def StartButton():
                             Na_Concentration2 = 2.370854 * max_current2 - 138.698   #Concentration Estimation of Na
                             Na_Concentration2 = round(Na_Concentration2, 4) #Round the number to 4 decimal places
         
-        
+                            messagebox.showinfo("SUCCESS", "Measurement Completed!")
+
                             #Calculate Concentration
                             if ion1.get() == "K" and ion2.get() == "K":
                                 result1.insert(0, K_Concentration1)
@@ -358,33 +492,6 @@ def StartButton():
                                 result2.insert(0, K_Concentration2)
                             
                        
-                        if methodnumber == '1':
-                            filtered_x = [value for index, value in enumerate(x) if index > 5413]
-                            filtered_y1 = [value for index, value in enumerate(y1) if index > 5413]
-                            filtered_y2 = [value for index, value in enumerate(y2) if index > 5413]
-
-                            #Subplot for Channel 1  
-                            plt.subplot(211)
-                            plt.plot(filtered_x, filtered_y1, color= 'red')
-                            plt.subplot(211).set_title("Channel 1")
-                            plt.xlabel("Voltage(V)")
-                            plt.ylabel("Current(µA)")
-                            plt.axis([axis_min, axis_max, CV_min_current1, CV_max_current1])
-                            plt.grid('on')
-
-                            #Subplot for channel 2
-                            plt.subplot(212)
-                            plt.plot(filtered_x, filtered_y2, color = 'green')
-                            plt.xlabel("Voltage(V)")
-                            plt.ylabel("Current(µA)")
-                            plt.axis([axis_min, axis_max, CV_min_current2, CV_max_current2])
-                            plt.grid('on')
-    
-                            #Naming the main graph
-                            plt.suptitle("Voltammogram")   
-                            plt.show()
-
-                        else : #DPV
                             #Subplot for Channel 1  
                             plt.subplot(211)
                             plt.plot(x, y1, color= 'red')
@@ -406,8 +513,8 @@ def StartButton():
                             plt.suptitle("Voltammogram")   
                             plt.show()
 
-                    else :
-                        messagebox.showerror("ERROR", "ERROR")
+                        else :
+                            messagebox.showerror("ERROR", "ERROR")
 
 #Reset Button Function
 def ResetButton():
@@ -512,7 +619,7 @@ method_button.grid(column = 1, row = 4)
 Ion_sample1 = tk.Label(window, text = "Ion Sample Type for Channel 1").grid(column = 8, row = 1)
 ion1 = tk.StringVar()
 ion_choosen1 = ttk.Combobox(window, width = 22, textvariable = ion1)
-ion_choosen1['values'] = ('Na', 'K', 'FeCN')
+ion_choosen1['values'] = ('Na', 'K', 'Calibration')
 ion_choosen1.grid(column = 10, row = 1)
 ion_choosen1.current()
 ion1.set("")
@@ -521,7 +628,7 @@ ion1.set("")
 Ion_sample2 = tk.Label(window, text = "Ion Sample Type for Channel 2").grid(column = 8, row = 2)
 ion2 = tk.StringVar()
 ion_choosen2 = ttk.Combobox(window, width = 22, textvariable = ion2)
-ion_choosen2['values'] = ('Na', 'K', 'FeCN','None')
+ion_choosen2['values'] = ('Na', 'K', 'Calibration','None')
 ion_choosen2.grid(column = 10, row = 2)
 ion_choosen2.current()
 ion2.set("")
