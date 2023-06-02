@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from PIL import Image, ImageTk
 
 import numpy as np
 import pandas as pd
@@ -581,8 +580,7 @@ window.title("PS Dual")
 window.resizable(False, False)
 
 #add icon logo
-icon = tk.PhotoImage(file = 'gear-icon.png')
-window.iconphoto(False, icon)
+window.iconbitmap("C:\TA2\logo.ico")
 
 #Column 1
 method = tk.Label(window, text = "Method")
